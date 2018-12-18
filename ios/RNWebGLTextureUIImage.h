@@ -2,6 +2,9 @@
 
 #import "RNWebGLTexture.h"
 
+
 @interface RNWebGLTextureUIImage: RNWebGLTexture
-- (instancetype)initWithConfig:(NSDictionary *)config withImage:(UIImage *)image;
+
+- (instancetype)initWithConfig:(NSDictionary *)config byObjectManager:(RNWebGLObjectManager*) manager withImage:(UIImage *)image;
+
 @end

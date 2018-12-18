@@ -6,43 +6,55 @@
 #import "RCTConvert.h"
 #endif
 
+#import "RNWebGLContext.h"
+#import "RNWebGLObjectManager.h"
 #import "RNWebGLTextureUIImage.h"
 
 @implementation RNWebGLTextureUIImage
 
-- (instancetype)initWithConfig:(NSDictionary *)config withImage:(UIImage *)image {
+- (instancetype)initWithConfig:(NSDictionary *)config byObjectManager:(RNWebGLObjectManager *)manager withImage:(UIImage *)image {
     bool yflip = [RCTConvert BOOL:config[@"yflip"]];
     if (yflip) {
         image = [RNWebGLTextureUIImage flipImageVertically: image];
     }
     if((self = [super initWithConfig:config withWidth:image.size.width withHeight:image.size.height])) {
-      CGImageRef imageRef = [image CGImage];
-      unsigned long width = CGImageGetWidth(imageRef);
-      unsigned long height = CGImageGetHeight(imageRef);
-      
-      NSUInteger bytesPerPixel = CGImageGetBitsPerPixel(imageRef);
-      NSUInteger bitsPerComponent = CGImageGetBitsPerComponent(imageRef);
-      
-      GLubyte *textureData = (GLubyte *)malloc(width * height * bytesPerPixel);
-      
-      CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-      NSUInteger bytesPerRow = bytesPerPixel * width;
-      CGContextRef context = CGBitmapContextCreate(textureData, width, height,
-                                                   bitsPerComponent, bytesPerRow, colorSpace,
-                                                   kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-      CGColorSpaceRelease(colorSpace);
-      
-      CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
-      CGContextRelease(context);
-      
-      GLuint textureID;
-      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-      glGenTextures(1, &textureID);
-      
-      glBindTexture(GL_TEXTURE_2D, textureID);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)width, (int)height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-      
-      [self attachTexture:textureID];
+      RNWebGLContext * ctx = [manager getContextWithId: @(self.ctxId)];
+      if(ctx) {
+          // TODO: Add support more UIImage
+          [ctx runAsync:^{
+              CGImageRef imageRef = [image CGImage];
+              
+              unsigned long width = CGImageGetWidth(imageRef);
+              unsigned long height = CGImageGetHeight(imageRef);
+            
+              GLubyte* textureData = (GLubyte *)malloc(width * height * 4);
+              CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+              NSUInteger bytesPerPixel = 4;
+              NSUInteger bytesPerRow = bytesPerPixel * width;
+              NSUInteger bitsPerComponent = 8;
+              CGContextRef context = CGBitmapContextCreate(textureData, width, height,
+                                                           bitsPerComponent, bytesPerRow, colorSpace,
+                                                           kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+              CGColorSpaceRelease(colorSpace);
+              CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
+              CGContextRelease(context);
+              
+              GLuint textureID;
+              GLint boundedBefore;
+              glGenTextures(1, &textureID);
+              glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundedBefore);
+              
+              glBindTexture(GL_TEXTURE_2D, textureID);
+              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+              
+              glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)width, (int)height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+              
+              glBindTexture(GL_TEXTURE_2D, boundedBefore);
+              
+              [self attachTexture:textureID];
+          }];
+      }
     }
     return self;
 }

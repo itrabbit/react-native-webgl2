@@ -16,11 +16,18 @@
 
 #import "RNWebGLObject.h"
 
+@class RNWebGLContext;
+
 typedef void (^RNWebGLObjectCompletionBlock)(NSError *error, RNWebGLObject *obj);
 
+@class RNWebGLObjectManager;
+
 @protocol RNWebGLObjectConfigLoader <RCTBridgeModule>
+
 -(BOOL)canLoadConfig:(NSDictionary *)config;
--(void)loadWithConfig:(NSDictionary *)config withCompletionBlock:(RNWebGLObjectCompletionBlock)callback;
+
+-(void)loadWithConfig:(NSDictionary *)config byObjectManager:(RNWebGLObjectManager *)manager withCompletionBlock:(RNWebGLObjectCompletionBlock)callback;
+
 @end
 
 @interface RNWebGLObjectManager : NSObject <RCTBridgeModule>
@@ -35,9 +42,11 @@ typedef void (^RNWebGLObjectCompletionBlock)(NSError *error, RNWebGLObject *obj)
 
 -(void)unloadWithCtxId:(RNWebGLContextId)id;
 
+-(void)saveContext:(nonnull id)glContext;
 
-- (void)saveContext:(nonnull id)glContext;
-- (void)deleteContextWithId:(nonnull NSNumber *)contextId;
+-(void)deleteContextWithId:(nonnull NSNumber *)contextId;
+
+-(RNWebGLContext *)getContextWithId:(NSNumber *)contextId;
 
 @end
 

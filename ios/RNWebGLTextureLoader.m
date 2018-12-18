@@ -64,14 +64,14 @@ RCT_EXPORT_MODULE()
     return [paths firstObject];
 }
 
-- (void)loadWithConfig:(NSDictionary *)config withCompletionBlock:(RNWebGLObjectCompletionBlock)callback {
+-(void)loadWithConfig:(NSDictionary *)config byObjectManager:(RNWebGLObjectManager *)manager withCompletionBlock:(RNWebGLObjectCompletionBlock)callback {
     id imageDict = [config objectForKey:@"image"];
     if(imageDict != NULL) {
         if([imageDict isKindOfClass:[NSDictionary class]]) {
             NSString* base64 = [imageDict objectForKey:@"base64"];
             if(base64 != NULL) {
                 NSData* data = [[NSData alloc]initWithBase64EncodedString:base64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
-                RNWebGLTextureUIImage *obj = [[RNWebGLTextureUIImage alloc] initWithConfig:config withImage: [UIImage imageWithData:data]];
+                RNWebGLTextureUIImage *obj = [[RNWebGLTextureUIImage alloc] initWithConfig:config byObjectManager:manager withImage: [UIImage imageWithData:data]];
                 callback(nil, (RNWebGLObject*)obj);
                 return;
             }
@@ -106,7 +106,7 @@ RCT_EXPORT_MODULE()
                 return;
             }
             NSData *data = [[NSFileManager defaultManager] contentsAtPath:localPath];
-            RNWebGLTextureUIImage *obj = [[RNWebGLTextureUIImage alloc] initWithConfig:config withImage: [UIImage imageWithData:data]];
+            RNWebGLTextureUIImage *obj = [[RNWebGLTextureUIImage alloc] initWithConfig:config byObjectManager:manager withImage: [UIImage imageWithData:data]];
             callback(nil, obj);
             return;
         }
@@ -120,7 +120,7 @@ RCT_EXPORT_MODULE()
                                 partialLoadBlock:nil
                                  completionBlock:^(NSError *error, UIImage *loadedImage) {
                                      void (^setImageBlock)(UIImage *) = ^(UIImage *image) {
-                                         RNWebGLTextureUIImage *obj = [[RNWebGLTextureUIImage alloc] initWithConfig:config withImage:image];
+                                         RNWebGLTextureUIImage *obj = [[RNWebGLTextureUIImage alloc] initWithConfig:config byObjectManager:manager withImage:image];
                                          callback(nil, obj);
                                      };
                                      if (error) {

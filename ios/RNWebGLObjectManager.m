@@ -131,7 +131,7 @@ RCT_REMAP_METHOD(destroyObjectAsync,
     }
     else {
         __weak RNWebGLObjectManager *weakSelf = self;
-        [loader loadWithConfig:config withCompletionBlock:^(NSError *err, RNWebGLObject *obj) {
+        [loader loadWithConfig:config byObjectManager:weakSelf withCompletionBlock:^(NSError *err, RNWebGLObject *obj) {
             if(obj != nil && weakSelf != nil) {
                 weakSelf.objects[@(obj.objId)] = obj;
             }
