@@ -6,7 +6,7 @@ export const RNWebGLRenderingContext = class WebGLRenderingContext {
   __ctxId: ?number;
 };
 
-export const RNWebGL2RenderingContext = class WebGL2RenderingContext extends WebGLRenderingContext {};
+export const RNWebGL2RenderingContext = class WebGL2RenderingContext extends RNWebGLRenderingContext {};
 
 const idToObject = {};
 
@@ -78,6 +78,7 @@ global.WebGLFramebuffer = RNWebGLFramebuffer;
 global.WebGLRenderbuffer = RNWebGLRenderbuffer;
 global.WebGLUniformLocation = RNWebGLUniformLocation;
 global.WebGLRenderingContext = RNWebGLRenderingContext;
+global.WebGL2RenderingContext = RNWebGL2RenderingContext;
 global.WebGLTransformFeedback = RNWebGLTransformFeedback;
 global.WebGLVertexArrayObject = RNWebGLVertexArrayObject;
 global.WebGLShaderPrecisionFormat = RNWebGLShaderPrecisionFormat;

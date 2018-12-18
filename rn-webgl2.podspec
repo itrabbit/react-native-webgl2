@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.source              = { :git => 'https://github.com/itrabbit/react-native-webgl2.git', :tag => "v#{package['version']}" }
   s.requires_arc        = true
   s.platform            = :ios, '10.3'
-  s.pod_target_xcconfig = { 'ENABLE_BITCODE' => 'NO' }
+  s.pod_target_xcconfig = { 'ENABLE_BITCODE' => 'YES' }
   s.source_files        = 'ios/*.{h,m}','cpp/*.{h,c,cpp,mm}'
   s.framework           = 'OpenGLES'
   s.dependency          'React'
