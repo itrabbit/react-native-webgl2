@@ -13,7 +13,7 @@
   "main": "lib/index.js",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git@github.com:itrabbit/react-native-webgl2.git"
   },
   "peerDependencies": {
     "react": "^16.*",
