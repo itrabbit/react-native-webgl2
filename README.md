@@ -1,7 +1,7 @@
 <img width="32" alt="icon" src="https://cloud.githubusercontent.com/assets/211411/9813786/eacfcc24-5888-11e5-8f9b-5a907a2cbb21.png"> react-native-webgl
 ========
 
-`react-native-webgl` implements WebGL 1 in [React Native](https://facebook.github.io/react-native/).
+`react-native-webgl` implements WebGL 2 in [React Native](https://facebook.github.io/react-native/).
 
 ## Install
 
