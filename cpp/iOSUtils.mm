@@ -2,6 +2,7 @@
 #include <stdarg.h>
 
 #import <Foundation/Foundation.h>
+#import <OpenGLES/EAGL.h>
 
 void iOSLog(const char *msg, ...) {
   va_list args;

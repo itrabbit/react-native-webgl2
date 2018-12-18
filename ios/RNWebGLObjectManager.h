@@ -6,6 +6,14 @@
 #import "RCTBridgeModule.h"
 #endif
 
+#if __has_include(<React/RCTBridge.h>)
+#import <React/RCTBridge.h>
+#elif __has_include("React/RCTBridge.h")
+#import "React/RCTBridge.h"
+#else
+#import "RCTBridge.h"
+#endif
+
 #import "RNWebGLObject.h"
 
 typedef void (^RNWebGLObjectCompletionBlock)(NSError *error, RNWebGLObject *obj);

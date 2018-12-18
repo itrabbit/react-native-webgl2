@@ -33,6 +33,8 @@
 - (void)takeSnapshotWithOptions:(nonnull NSDictionary *)options resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject;
 - (void)destroy;
 
++ (CGFloat)screenScale;
+
 // "protected"
 @property (nonatomic, assign) RNWebGLContextId contextId;
 @property (nonatomic, strong, nonnull) EAGLContext *eaglCtx;

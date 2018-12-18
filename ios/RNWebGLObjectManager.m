@@ -1,10 +1,13 @@
 #import "RNWebGLObjectManager.h"
 #import "RNWebGLContext.h"
 
+#import "RNWebGLTextureUIImage.h"
+
 @interface RNWebGLObjectManager()
 
 @property (nonatomic, strong) NSMutableDictionary<NSNumber *, RNWebGLContext *> *glContexts;
 @property (nonatomic, strong) NSMutableDictionary<NSNumber *, RNWebGLObject *> *objects;
+@property (nonatomic, strong) NSArray<id<RNWebGLObjectConfigLoader>> *loaders;
 
 @end
 
@@ -18,6 +21,7 @@ RCT_EXPORT_MODULE(RNWebGLObjectManager);
     if ((self = [super init])) {
         _glContexts = [NSMutableDictionary dictionary];
         _objects = [NSMutableDictionary dictionary];
+        _loaders = NULL;
     }
     return self;
 }
@@ -48,11 +52,11 @@ RCT_EXPORT_MODULE(RNWebGLObjectManager);
 
 # pragma mark - Snapshots
 
-RCT_EXPORT_METHOD(takeSnapshotAsync,
-                  takeSnapshotWithContextId:(nonnull NSNumber *)ctxId
-                  andOptions:(nonnull NSDictionary *)options
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
+RCT_REMAP_METHOD(takeSnapshotAsync,
+                 takeSnapshotWithContextId:(nonnull NSNumber *)ctxId
+                 andOptions:(nonnull NSDictionary *)options
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
 {
     RNWebGLContext *glContext = [self getContextWithId:ctxId];
     if (glContext == nil) {
@@ -64,11 +68,12 @@ RCT_EXPORT_METHOD(takeSnapshotAsync,
 
 # pragma mark - Headless Context
 
-RCT_EXPORT_METHOD(createContextAsync,
-                  createContext:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-{
-    RNWebGLContext *glContext = [[RNWebGLContext alloc] initWithDelegate:nil andModuleRegistry:_moduleRegistry];
+RCT_REMAP_METHOD(createContextAsync,
+                 createContext:(RCTPromiseResolveBlock)resolve
+                 reject:(RCTPromiseRejectBlock)reject)
+{    
+    RNWebGLContext *glContext = [[RNWebGLContext alloc] initWithDelegate:nil andObjectMananger:self];
+    
     [glContext initialize:^(BOOL success) {
         if (success) {
             resolve(@{ @"ctxId": @(glContext.contextId) });
@@ -82,10 +87,10 @@ RCT_EXPORT_METHOD(createContextAsync,
     }];
 }
 
-RCT_EXPORT_METHOD(destroyContextAsync,
-                  destroyContextWithId:(nonnull NSNumber *)ctxId
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject) {
+RCT_REMAP_METHOD(destroyContextAsync,
+                 destroyContextWithId:(nonnull NSNumber *)ctxId
+                 resolve:(RCTPromiseResolveBlock)resolve
+                 reject:(RCTPromiseRejectBlock)reject) {
     RNWebGLContext *glContext = [self getContextWithId:ctxId];
     if (glContext != nil) {
         [glContext destroy];
@@ -95,15 +100,13 @@ RCT_EXPORT_METHOD(destroyContextAsync,
     }
 }
 
-RCT_EXPORT_METHOD(destroyObjectAsync,
-                  destroyObjectAsync:(nonnull NSNumber *)objId
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject) {
+RCT_REMAP_METHOD(destroyObjectAsync,
+                 destroyObjectAsync:(nonnull NSNumber *)objId
+                 resolve:(RCTPromiseResolveBlock)resolve
+                 reject:(RCTPromiseRejectBlock)reject) {
     _objects[objId] = nil;
     resolve(@(YES));
 }
-
-@end
 
 
 # pragma mark - Object Loading
@@ -121,7 +124,7 @@ RCT_EXPORT_METHOD(destroyObjectAsync,
 }
 
 -(void)loadWithConfig:(NSDictionary *)config withCompletionBlock:(RNWebGLObjectCompletionBlock)callback {
-    id<RNWebGLTextureConfigLoader> loader = [self objectLoaderForConfig:config];
+    id<RNWebGLObjectConfigLoader> loader = [self objectLoaderForConfig:config];
     if (!loader) {
         if (RCT_DEBUG) RCTLogError(@"No suitable RNWebGLTextureLoader found for %@", config);
         callback([NSError errorWithDomain:@"RNWebGL" code:1 userInfo:@{ NSLocalizedDescriptionKey: @"No suitable RNWebGLTextureLoader found" }], nil);
@@ -140,13 +143,17 @@ RCT_EXPORT_METHOD(destroyObjectAsync,
 -(void)loadWithConfigAndWaitAttached:(NSDictionary *)config withCompletionBlock:(RNWebGLObjectCompletionBlock)callback {
     [self loadWithConfig:config withCompletionBlock:^(NSError *error, RNWebGLObject *obj) {
         if(obj != nil) {
-            if ([obj isAttached]) {
-                callback(error, obj);
+            if([obj isKindOfClass:[RNWebGLTexture class]]) {
+                if ([((RNWebGLTexture*)obj) isAttached]) {
+                    callback(error, obj);
+                    return;
+                }
+                [((RNWebGLTexture*)obj) listenAttached:^{
+                    callback(error, obj);
+                }];
                 return;
             }
-            [obj listenAttached:^{
-                callback(error, obj);
-            }];
+            callback(error, obj);
             return;
         }
         callback(error, nil);
@@ -157,7 +164,10 @@ RCT_EXPORT_METHOD(destroyObjectAsync,
     NSNumber *key = @(objId);
     RNWebGLObject *t = _objects[key];
     if (t) {
-        [t unload];
+        if([t isKindOfClass:[RNWebGLTexture class]]) {
+            [((RNWebGLTexture*)t) unload];
+            
+        }
         [_objects removeObjectForKey:key];
     }
 }
@@ -167,12 +177,17 @@ RCT_EXPORT_METHOD(destroyObjectAsync,
     for (NSNumber *key in [_objects keyEnumerator]) {
         RNWebGLObject *t = _objects[key];
         if (t.ctxId == ctxId) {
-            [t unload];
+            if([t isKindOfClass:[RNWebGLTexture class]]) {
+                [((RNWebGLTexture*)t) unload];
+                
+            }
             [unloadedKeys addObject:key];
         }
     }
     [_objects removeObjectsForKeys:unloadedKeys];
 }
+
+@end
 
 # pragma mark - Bridge
 

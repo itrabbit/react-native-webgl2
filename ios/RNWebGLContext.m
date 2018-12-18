@@ -12,6 +12,13 @@
 
 @end
 
+@interface RCTBridge ()
+
+- (JSGlobalContextRef)jsContextRef;
+- (void)dispatchBlock:(dispatch_block_t)block queue:(dispatch_queue_t)queue;
+
+@end
+
 @implementation RNWebGLContext
 
 - (instancetype)initWithDelegate:(id<RNWebGLContextDelegate>)delegate andObjectMananger:(nonnull RNWebGLObjectManager *)objectManager {
@@ -77,7 +84,7 @@
                 [self.delegate glContextInitialized:self];
             }
             BLOCK_SAFE_RUN(callback, YES);
-        }];
+        } queue:RCTJSThread];
         return;
     }
     BLOCK_SAFE_RUN(callback, NO);
@@ -175,7 +182,7 @@
                                             providerRef, NULL, true, kCGRenderingIntentDefault);
         
         // Begin image context
-        CGFloat scale = [EXUtilities screenScale];
+        CGFloat scale = [RNWebGLContext screenScale];
         NSInteger widthInPoints = width / scale;
         NSInteger heightInPoints = height / scale;
         UIGraphicsBeginImageContextWithOptions(CGSizeMake(widthInPoints, heightInPoints), NO, scale);
@@ -255,8 +262,45 @@
     NSString *directory = [[self getPathForDirectory: NSCachesDirectory] stringByAppendingPathComponent:@"GLView"];
     NSString *fileName = [[[NSUUID UUID] UUIDString] stringByAppendingString:extension];
     
-    [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:@[] error:nil];
+    [[NSFileManager defaultManager] createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:@{} error:nil];
     
     return [directory stringByAppendingPathComponent:fileName];
 }
+
+#pragma mark - Copy from RN
+
++ (BOOL)isMainQueue {
+    static void *mainQueueKey = &mainQueueKey;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dispatch_queue_set_specific(dispatch_get_main_queue(),
+                                    mainQueueKey, mainQueueKey, NULL);
+    });
+    return dispatch_get_specific(mainQueueKey) == mainQueueKey;
+}
+
++ (void)unsafeExecuteOnMainQueueOnceSync:(dispatch_once_t *)onceToken block:(dispatch_block_t)block {
+    // The solution was borrowed from a post by Ben Alpert:
+    // https://benalpert.com/2014/04/02/dispatch-once-initialization-on-the-main-thread.html
+    // See also: https://www.mikeash.com/pyblog/friday-qa-2014-06-06-secrets-of-dispatch_once.html
+    if ([self isMainQueue]) {
+        dispatch_once(onceToken, block);
+    } else {
+        if (DISPATCH_EXPECT(*onceToken == 0L, NO)) {
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                dispatch_once(onceToken, block);
+            });
+        }
+    }
+}
+
++ (CGFloat)screenScale {
+    static dispatch_once_t onceToken;
+    static CGFloat scale;
+    [self unsafeExecuteOnMainQueueOnceSync:&onceToken block:^{
+        scale = [UIScreen mainScreen].scale;
+    }];
+    return scale;
+}
+
 @end

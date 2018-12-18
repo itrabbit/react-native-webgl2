@@ -8,7 +8,6 @@
 #ifdef __APPLE__
 #include <OpenGLES/ES3/gl.h>
 #include <OpenGLES/ES3/glext.h>
-#include <OpenGLES/EAGL.h>
 #endif
 
 #include <exception>
@@ -25,7 +24,7 @@
 #include "JSUtils.h"
 #include "JSConvertTypedArray.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include"stb_image.h"
 
 #ifdef __APPLE__
 #include "iOSUtils.h"
@@ -2107,7 +2106,7 @@ return nullptr;                                                     \
       // Exponent extensions
       // -------------------
       
-      _WRAP_METHOD(endFrame, 0) {
+      _WRAP_METHOD(endFrameEXP, 0) {
         addToNextBatch([=] {
           setNeedsRedraw(true);
         });
@@ -2116,7 +2115,7 @@ return nullptr;                                                     \
         return nullptr;
       }
       
-      _WRAP_METHOD(flush, 0) {
+      _WRAP_METHOD(flushEXP, 0) {
         addBlockingToNextBatch([&] {
           // nothing, it's just a helper so that we can measure how much time some operations take
         });
@@ -2410,8 +2409,8 @@ JSObjectSetFunctionWithUTF8CStringName(jsCtx, jsGl, #name,        \
         _INSTALL_METHOD(getExtension);
         
         // Exponent extensions
-        _INSTALL_METHOD(endFrame);
-        _INSTALL_METHOD(flush);
+        _INSTALL_METHOD(endFrameEXP);
+        _INSTALL_METHOD(flushEXP);
         
 #undef _INSTALL_METHOD
       }
