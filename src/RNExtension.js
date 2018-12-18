@@ -5,6 +5,7 @@ import { RNWebGLTexture } from "./webglTypes";
 const { RNWebGLTextureManager } = NativeModules;
 
 type RNWebGLRenderingContext = WebGLRenderingContext & {
+  __flush: *,
   __endFrame: *,
   __readPixelsToTemporaryFile: *
 };
@@ -39,6 +40,7 @@ export default {
           return { texture, width, height };
         }),
       unloadTexture: texture => RNWebGLTextureManager.destroy(texture.id),
-      endFrame: gl.__endFrame.bind(gl)
+      endFrame: gl.__endFrame.bind(gl),
+      flush: gl.__flush.bind(gl),
     })
 };

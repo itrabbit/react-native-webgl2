@@ -30,6 +30,8 @@
 
 @implementation RNWebGLView
 
+RCT_NOT_IMPLEMENTED(- (instancetype)init);
+
 // Specify that we want this UIView to be backed by a CAEAGLLayer
 + (Class)layerClass {
     return [CAEAGLLayer class];
@@ -49,9 +51,9 @@
         CAEAGLLayer *eaglLayer = (CAEAGLLayer *) self.layer;
         eaglLayer.opaque = YES;
         eaglLayer.drawableProperties = @{
-                                         kEAGLDrawablePropertyRetainedBacking: @(YES),
-                                         kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8,
-                                         };
+          kEAGLDrawablePropertyRetainedBacking: @(YES),
+          kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8,
+        };
         
         // Initialize GL context
         _glContext = [[RNWebGLContext alloc] initWithDelegate:self andObjectMananger: [viewManager.bridge webglObjectManager]];
@@ -208,8 +210,10 @@
 }
 
 - (void)removeFromSuperview {
-    // Destroy EXGLContext
+    // Destroy NRWebGLContext
     [_glContext destroy];
+    // Destroy GL objects owned by us
+    [self deleteViewBuffers];
     // Stop draw loop
     [_displayLink invalidate];
     _displayLink = nil;
@@ -224,6 +228,8 @@
     // framebuffer to create is unknown. In this case we have nowhere to render to so we skip
     // this frame (the GL work to run remains on the queue for next time).
     if (_glContext.isInitialized && _viewFramebuffer != 0) {
+        // Flush context
+        [_glContext flush];
         // Present current state of view buffers
         // This happens exactly at `gl.endFrame()` in the queue
         if (_viewColorbuffer != 0 && !_renderbufferPresented) {

@@ -50,7 +50,7 @@
 // Forward declarations
 
 class RNWebGLContext;
-static RNWebGLContext *RNWebGLContextGet(RNWebGLContextId RNWebGLCtxId);
+static RNWebGLContext *RNWebGLContextGet(RNWebGLContextId сtxId);
 
 
 // --- RNWebGLContext -------------------------------------------------------------
@@ -119,7 +119,7 @@ private:
     {
       std::unique_lock<decltype(mutex)> lock(mutex);
       endNextBatch();
-      flushOnGLThread();
+      // flushOnGLThread();
       cv.wait(lock, [&] { return done; });
     }
 #else
@@ -127,7 +127,7 @@ private:
     auto future = task.get_future();
     addToNextBatch([&] { task(); });
     endNextBatch();
-    flushOnGLThread();
+    // flushOnGLThread();
     future.wait();
 #endif
   }
@@ -143,17 +143,17 @@ private:
   // are queued for even later.
   template<typename F>
   inline JSValueRef addFutureToNextBatch(JSContextRef jsCtx, F &&f) noexcept {
-    auto RNWebGLObjId = createObject();
+    auto objId = createObject();
     addToNextBatch([=] {
-      assert(objects.find(RNWebGLObjId) == objects.end());
-      mapObject(RNWebGLObjId, f());
+      assert(objects.find(objId) == objects.end());
+      mapObject(objId, f());
     });
-    return JSValueMakeNumber(jsCtx, RNWebGLObjId);
+    return JSValueMakeNumber(jsCtx, objId);
   }
   
 public:
   // function that calls flush on GL thread - on Android it is passed by JNI
-  std::function<void(void)> flushOnGLThread = [&]{};
+  // std::function<void(void)> flushOnGLThread = [&]{};
   
   // [GL thread] Do all the remaining work we can do on the GL thread
   void flush(void) noexcept {
@@ -188,16 +188,16 @@ public:
     return nextObjectId++;
   }
   
-  inline void destroyObject(RNWebGLObjectId RNWebGLObjId) noexcept {
-    objects.erase(RNWebGLObjId);
+  inline void destroyObject(RNWebGLObjectId objId) noexcept {
+    objects.erase(objId);
   }
   
-  inline void mapObject(RNWebGLObjectId RNWebGLObjId, GLuint glObj) noexcept {
-    objects[RNWebGLObjId] = glObj;
+  inline void mapObject(RNWebGLObjectId objId, GLuint glObj) noexcept {
+    objects[objId] = glObj;
   }
   
-  inline GLuint lookupObject(RNWebGLObjectId RNWebGLObjId) noexcept {
-    auto iter = objects.find(RNWebGLObjId);
+  inline GLuint lookupObject(RNWebGLObjectId objId) noexcept {
+    auto iter = objects.find(objId);
     return iter == objects.end() ? 0 : iter->second;
   }
   
@@ -208,13 +208,13 @@ private:
   bool supportsWebGL2 = false;
   
 public:
-  RNWebGLContext(JSGlobalContextRef jsCtx, RNWebGLContextId RNWebGLCtxId) {
+  RNWebGLContext(JSGlobalContextRef jsCtx, RNWebGLContextId сtxId) {
     // Prepare for TypedArray usage
     prepareTypedArrayAPI(jsCtx);
     
     // Create JS version of us
     auto jsClass = JSClassCreate(&kJSClassDefinitionEmpty);
-    jsGl = JSObjectMake(jsCtx, jsClass, (void *) (intptr_t) RNWebGLCtxId);
+    jsGl = JSObjectMake(jsCtx, jsClass, (void *) (intptr_t) сtxId);
     JSClassRelease(jsClass);
     installMethods(jsCtx);
     installConstants(jsCtx);
@@ -470,22 +470,22 @@ size_t jsArgc,              \
 const JSValueRef jsArgv[],  \
 JSValueRef* jsException)    \
 {                                                                     \
-auto RNWebGLCtx = RNWebGLContextGet((RNWebGLContextId) (intptr_t)           \
+auto ctx = RNWebGLContextGet((RNWebGLContextId) (intptr_t)           \
 JSObjectGetPrivate(jsThis));          \
-if (!RNWebGLCtx) {                                                     \
+if (!ctx) {                                                     \
 return nullptr;                                                   \
 }                                                                   \
 try {                                                               \
 if (jsArgc < minArgc) {                                           \
 throw std::runtime_error("RNWebGL: Too few arguments to " #name "()!"); \
 }                                                                 \
-if (requiresWebGL2 && !RNWebGLCtx->supportsWebGL2) {                 \
+if (requiresWebGL2 && !ctx->supportsWebGL2) {                 \
 throw std::runtime_error("RNWebGL: This device doesn't support WebGL2 method: " #name "()!"); \
 }                                                                 \
-return RNWebGLCtx->RNWebGLNativeInstance_##name(jsCtx, jsFunction, jsThis, \
+return ctx->RNWebGLNativeInstance_##name(jsCtx, jsFunction, jsThis, \
 jsArgc, jsArgv, jsException); \
 } catch (const std::exception &e) {                                 \
-RNWebGLCtx->jsThrow(jsCtx, e.what(), jsException);                   \
+ctx->jsThrow(jsCtx, e.what(), jsException);                   \
 return nullptr;                                                   \
 }                                                                   \
 }                                                                     \
@@ -1412,17 +1412,17 @@ return JSValueMakeBoolean(jsCtx, glResult);   \
     
     JSValueRef jsResults[count];
     for (auto i = 0; i < count; ++i) {
-      RNWebGLObjectId RNWebGLObjId = 0;
+      RNWebGLObjectId objId = 0;
       for (const auto &pair : objects) {
         if (pair.second == glResults[i]) {
-          RNWebGLObjId = pair.first;
+          objId = pair.first;
         }
       }
-      if (RNWebGLObjId == 0) {
+      if (objId == 0) {
         throw new std::runtime_error("RNWebGL: Internal error: couldn't find RNWebGLObjectId "
                                      "associated with shader in getAttachedShaders()!");
       }
-      jsResults[i] = JSValueMakeNumber(jsCtx, RNWebGLObjId);
+      jsResults[i] = JSValueMakeNumber(jsCtx, objId);
     }
     return JSObjectMakeArray(jsCtx, count, jsResults, nullptr);
   }
@@ -2106,16 +2106,16 @@ return nullptr;                                                     \
       // Exponent extensions
       // -------------------
       
-      _WRAP_METHOD(endFrameEXP, 0) {
-        addToNextBatch([=] {
-          setNeedsRedraw(true);
-        });
-        endNextBatch();
-        flushOnGLThread();
-        return nullptr;
+      _WRAP_METHOD(__endFrame, 0) {
+          addToNextBatch([=] {
+              setNeedsRedraw(true);
+          });
+          endNextBatch();
+          // flushOnGLThread();
+          return nullptr;
       }
-      
-      _WRAP_METHOD(flushEXP, 0) {
+        
+      _WRAP_METHOD(__flush, 0) {
         addBlockingToNextBatch([&] {
           // nothing, it's just a helper so that we can measure how much time some operations take
         });
@@ -2409,8 +2409,8 @@ JSObjectSetFunctionWithUTF8CStringName(jsCtx, jsGl, #name,        \
         _INSTALL_METHOD(getExtension);
         
         // Exponent extensions
-        _INSTALL_METHOD(endFrameEXP);
-        _INSTALL_METHOD(flushEXP);
+        _INSTALL_METHOD(__endFrame);
+        _INSTALL_METHOD(__flush);
         
 #undef _INSTALL_METHOD
       }
@@ -3003,9 +3003,9 @@ JSValueMakeNumber(jsCtx, GL_ ## name))
     static std::mutex RNWebGLContextMapMutex;
     static RNWebGLContextId RNWebGLContextNextId = 1;
     
-    static RNWebGLContext *RNWebGLContextGet(RNWebGLContextId RNWebGLCtxId) {
+    static RNWebGLContext *RNWebGLContextGet(RNWebGLContextId сtxId) {
       std::lock_guard<decltype(RNWebGLContextMapMutex)> lock(RNWebGLContextMapMutex);
-      auto iter = RNWebGLContextMap.find(RNWebGLCtxId);
+      auto iter = RNWebGLContextMap.find(сtxId);
       if (iter != RNWebGLContextMap.end()) {
         return iter->second;
       }
@@ -3020,17 +3020,17 @@ JSValueMakeNumber(jsCtx, GL_ ## name))
       }
       
       // Create C++ object
-      RNWebGLContext *RNWebGLCtx;
-      RNWebGLContextId RNWebGLCtxId;
+      RNWebGLContext *gl;
+      RNWebGLContextId ctxId;
       {
         std::lock_guard<decltype(RNWebGLContextMapMutex)> lock(RNWebGLContextMapMutex);
-        RNWebGLCtxId = RNWebGLContextNextId++;
-        if (RNWebGLContextMap.find(RNWebGLCtxId) != RNWebGLContextMap.end()) {
+        ctxId = RNWebGLContextNextId++;
+        if (RNWebGLContextMap.find(ctxId) != RNWebGLContextMap.end()) {
           RNWebGLSysLog("Tried to reuse an RNWebGLContext id. This shouldn't really happen...");
           return 0;
         }
-        RNWebGLCtx = new RNWebGLContext(jsCtx, RNWebGLCtxId);
-        RNWebGLContextMap[RNWebGLCtxId] = RNWebGLCtx;
+        gl = new RNWebGLContext(jsCtx, ctxId);
+        RNWebGLContextMap[ctxId] = gl;
       }
       
       // Save JavaScript object
@@ -3041,96 +3041,100 @@ JSValueMakeNumber(jsCtx, GL_ ## name))
         JSObjectSetValueWithUTF8CStringName(jsCtx, jsGlobal, "__RNWebGLContexts", jsRNWebGLContextMap);
       }
       std::stringstream ss;
-      ss << RNWebGLCtxId;
-      auto RNWebGLCtxIdStr = ss.str();
+      ss << ctxId;
+      auto сtxIdStr = ss.str();
       JSObjectSetValueWithUTF8CStringName(jsCtx, jsRNWebGLContextMap,
-                                            RNWebGLCtxIdStr.c_str(), RNWebGLCtx->getJSObject());
+                                            сtxIdStr.c_str(), gl->getJSObject());
       
-      return RNWebGLCtxId;
+      return ctxId;
     }
     
-    void RNWebGLContextSetFlushMethod(RNWebGLContextId RNWebGLCtxId, std::function<void(void)> flushMethod) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        RNWebGLCtx->flushOnGLThread = flushMethod;
+/*
+    void RNWebGLContextSetFlushMethod(RNWebGLContextId сtxId, std::function<void(void)> flushMethod) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        ctx->flushOnGLThread = flushMethod;
       }
     }
+*/
     
+/*
 #ifdef __APPLE__
-    void RNWebGLContextSetFlushMethodObjc(RNWebGLContextId RNWebGLCtxId, RNWebGLFlushMethodBlock flushMethod) {
-      RNWebGLContextSetFlushMethod(RNWebGLCtxId, [flushMethod] {
+    void RNWebGLContextSetFlushMethodObjc(RNWebGLContextId сtxId, RNWebGLFlushMethodBlock flushMethod) {
+      RNWebGLContextSetFlushMethod(сtxId, [flushMethod] {
         flushMethod();
       });
     }
 #endif
-    
-    bool RNWebGLContextNeedsRedraw(RNWebGLContextId RNWebGLCtxId) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        return RNWebGLCtx->needsRedraw;
+*/
+ 
+    bool RNWebGLContextNeedsRedraw(RNWebGLContextId сtxId) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        return ctx->needsRedraw;
       }
       return false;
     }
     
-    void RNWebGLContextDrawEnded(RNWebGLContextId RNWebGLCtxId) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        RNWebGLCtx->setNeedsRedraw(false);
+    void RNWebGLContextDrawEnded(RNWebGLContextId сtxId) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        ctx->setNeedsRedraw(false);
       }
     }
     
-    void RNWebGLContextDestroy(RNWebGLContextId RNWebGLCtxId) {
+    void RNWebGLContextDestroy(RNWebGLContextId сtxId) {
       std::lock_guard<decltype(RNWebGLContextMapMutex)> lock(RNWebGLContextMapMutex);
       
       // Destroy C++ object, JavaScript side should just know...
-      auto iter = RNWebGLContextMap.find(RNWebGLCtxId);
+      auto iter = RNWebGLContextMap.find(сtxId);
       if (iter != RNWebGLContextMap.end()) {
         delete iter->second;
         RNWebGLContextMap.erase(iter);
       }
     }
     
-    void RNWebGLContextFlush(RNWebGLContextId RNWebGLCtxId) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        RNWebGLCtx->flush();
+    void RNWebGLContextFlush(RNWebGLContextId сtxId) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        ctx->flush();
       }
     }
     
-    void RNWebGLContextSetDefaultFramebuffer(RNWebGLContextId RNWebGLCtxId, GLint framebuffer) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        RNWebGLCtx->setDefaultFramebuffer(framebuffer);
+    void RNWebGLContextSetDefaultFramebuffer(RNWebGLContextId сtxId, GLint framebuffer) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        ctx->setDefaultFramebuffer(framebuffer);
       }
     }
     
     
-    RNWebGLObjectId RNWebGLContextCreateObject(RNWebGLContextId RNWebGLCtxId) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        return RNWebGLCtx->createObject();
+    RNWebGLObjectId RNWebGLContextCreateObject(RNWebGLContextId сtxId) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        return ctx->createObject();
       }
       return 0;
     }
     
-    void RNWebGLContextDestroyObject(RNWebGLContextId RNWebGLCtxId, RNWebGLObjectId RNWebGLObjId) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        RNWebGLCtx->destroyObject(RNWebGLObjId);
+    void RNWebGLContextDestroyObject(RNWebGLContextId сtxId, RNWebGLObjectId objId) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        ctx->destroyObject(objId);
       }
     }
     
-    void RNWebGLContextMapObject(RNWebGLContextId RNWebGLCtxId, RNWebGLObjectId RNWebGLObjId, GLuint glObj) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        RNWebGLCtx->mapObject(RNWebGLObjId, glObj);
+    void RNWebGLContextMapObject(RNWebGLContextId сtxId, RNWebGLObjectId objId, GLuint glObj) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        ctx->mapObject(objId, glObj);
       }
     }
     
-    GLuint RNWebGLContextGetObject(RNWebGLContextId RNWebGLCtxId, RNWebGLObjectId RNWebGLObjId) {
-      auto RNWebGLCtx = RNWebGLContextGet(RNWebGLCtxId);
-      if (RNWebGLCtx) {
-        return RNWebGLCtx->lookupObject(RNWebGLObjId);
+    GLuint RNWebGLContextGetObject(RNWebGLContextId сtxId, RNWebGLObjectId objId) {
+      auto ctx = RNWebGLContextGet(сtxId);
+      if (ctx) {
+        return ctx->lookupObject(objId);
       }
       return 0;
     }

@@ -47,8 +47,7 @@
     [EAGLContext setCurrentContext:nil];
 }
 
-- (void)runAsync:(void(^)(void))callback
-{
+- (void)runAsync:(void(^)(void))callback {
     if (_glQueue) {
         dispatch_async(_glQueue, ^{
             [self runInEAGLContext:self->_eaglCtx callback:callback];
@@ -76,10 +75,12 @@
             }
             self->_contextId = RNWebGLContextCreate(jsContextRef);
             [self->_objectManager saveContext:self];
-            
+            /*
             RNWebGLContextSetFlushMethodObjc(self->_contextId, ^{
                 [self flush];
             });
+            */
+            
             if ([self.delegate respondsToSelector:@selector(glContextInitialized:)]) {
                 [self.delegate glContextInitialized:self];
             }

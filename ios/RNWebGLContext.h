@@ -32,6 +32,7 @@
 - (void)runInEAGLContext:(EAGLContext*)context callback:(void(^)(void))callback;
 - (void)takeSnapshotWithOptions:(nonnull NSDictionary *)options resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject;
 - (void)destroy;
+- (void)flush;
 
 + (CGFloat)screenScale;
 

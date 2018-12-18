@@ -40,46 +40,48 @@ extern "C" {
     // JavaScript interface object (has a WebGLRenderingContext-style API) at
     // `global.__WebGLContexts[id]` in JavaScript.
     RNWebGLContextId RNWebGLContextCreate(JSGlobalContextRef jsCtx);
-    
+
+    /*
 #ifdef __cplusplus
     // [JS thread] Pass function to cpp that will run GL operations on GL thread
-    void RNWebGLContextSetFlushMethod(RNWebGLContextId WebGLCtxId, std::function<void(void)> flushMethod);
+    void RNWebGLContextSetFlushMethod(RNWebGLContextId ctxId, std::function<void(void)> flushMethod);
 #endif
     
 #ifdef __APPLE__
     // Objective-C wrapper for RNWebGLContextSetFlushMethod
     typedef void(^RNWebGLFlushMethodBlock)(void);
-    void RNWebGLContextSetFlushMethodObjc(RNWebGLContextId WebGLCtxId, RNWebGLFlushMethodBlock flushMethod);
+    void RNWebGLContextSetFlushMethodObjc(RNWebGLContextId ctxId, RNWebGLFlushMethodBlock flushMethod);
 #endif
+     */
     
     // [Any thread] Check whether we should redraw the surface
-    bool RNWebGLContextNeedsRedraw(RNWebGLContextId WebGLCtxId);
+    bool RNWebGLContextNeedsRedraw(RNWebGLContextId ctxId);
     
     // [GL thread] Tell cpp that we finished drawing to the surface
-    void RNWebGLContextDrawEnded(RNWebGLContextId WebGLCtxId);
+    void RNWebGLContextDrawEnded(RNWebGLContextId ctxId);
     
     // [Any thread] Release the resources for an WebGL context. The same id is never
     // reused.
-    void RNWebGLContextDestroy(RNWebGLContextId WebGLCtxId);
+    void RNWebGLContextDestroy(RNWebGLContextId ctxId);
     
     // [GL thread] Perform one frame's worth of queued up GL work
-    void RNWebGLContextFlush(RNWebGLContextId WebGLCtxId);
+    void RNWebGLContextFlush(RNWebGLContextId ctxId);
     
     // [GL thread] Set the default framebuffer (used when binding 0). Allows using
     // platform-specific extensions on the default framebuffer, such as MSAA.
-    void RNWebGLContextSetDefaultFramebuffer(RNWebGLContextId WebGLCtxId, GLint framebuffer);
+    void RNWebGLContextSetDefaultFramebuffer(RNWebGLContextId ctxId, GLint framebuffer);
     
     // [Any thread] Create an WebGL object. Initially maps to the OpenGL object zero.
-    RNWebGLObjectId RNWebGLContextCreateObject(RNWebGLContextId WebGLCtxId);
+    RNWebGLObjectId RNWebGLContextCreateObject(RNWebGLContextId ctxId);
     
     // [GL thread] Destroy an WebGL object.
-    void RNWebGLContextDestroyObject(RNWebGLContextId WebGLCtxId, RNWebGLObjectId WebGLObjId);
+    void RNWebGLContextDestroyObject(RNWebGLContextId ctxId, RNWebGLObjectId objId);
     
     // [GL thread] Set the underlying OpenGL object an WebGL object maps to.
-    void RNWebGLContextMapObject(RNWebGLContextId WebGLCtxId, RNWebGLObjectId WebGLObjId, GLuint glObj);
+    void RNWebGLContextMapObject(RNWebGLContextId ctxId, RNWebGLObjectId objId, GLuint glObj);
     
     // [GL thread] Get the underlying OpenGL object an WebGL object maps to.
-    GLuint RNWebGLContextGetObject(RNWebGLContextId WebGLCtxId, RNWebGLObjectId WebGLObjId);
+    GLuint RNWebGLContextGetObject(RNWebGLContextId ctxId, RNWebGLObjectId objId);
     
 #ifdef __cplusplus
 }
