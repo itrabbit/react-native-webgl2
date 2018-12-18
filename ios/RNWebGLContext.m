@@ -110,6 +110,8 @@
         RNWebGLContextFlush(self->_contextId);
         // Destroy JS binding
         RNWebGLContextDestroy(self->_contextId);
+        // Unload objects with gl context
+        [self->_objectManager unloadWithCtxId:self->_contextId];
         // Remove from dictionary of contexts
         [self->_objectManager deleteContextWithId:@(self->_contextId)];
     }];
