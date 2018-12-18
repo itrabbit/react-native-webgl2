@@ -225,7 +225,7 @@
     // this frame (the GL work to run remains on the queue for next time).
     if (_glContext.isInitialized && _viewFramebuffer != 0) {
         // Present current state of view buffers
-        // This happens exactly at `gl.endFrameEXP()` in the queue
+        // This happens exactly at `gl.endFrame()` in the queue
         if (_viewColorbuffer != 0 && !_renderbufferPresented) {
             // bind renderbuffer and present it on the layer
             [_glContext runInEAGLContext:_uiEaglCtx callback:^{

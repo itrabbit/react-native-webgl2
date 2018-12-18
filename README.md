@@ -87,30 +87,35 @@ There are also config options shared (by convention) across the loaders:
 
 - `yflip` (boolean): allows to vertically flip the texture when you load it. You likely always want to set this to true. (default is false because it's an extra cost)
 
-### Remaining WebGL features to implement
+### WebGL API
 
-The current early implementation miss a bunch of WebGL features, meaning that some gl methods won't work.
+Once the component is mounted and the OpenGL ES context has been created, the `gl` object received through the [`onContextCreate`](#glviewoncontextcreate "RNWebGLView.onContextCreate") prop becomes the interface to the OpenGL ES context, providing a WebGL API. It resembles a [WebGL2RenderingContext](https://www.khronos.org/registry/webgl/specs/latest/2.0/#3.7) in the WebGL 2 spec. However, some older Android devices may not support WebGL2 features. To check whether the device supports WebGL2 it's recommended to use `gl instanceof WebGL2RenderingContext`.
+An additional method `gl.endFrame()` is present which notifies the context that the current frame is ready to be presented. This is similar to a 'swap buffers' API call in other OpenGL platforms.
 
-Here is the methods that are not supported yet:
+The following WebGL2RenderingContext methods are currently unimplemented:
 
-- `framebufferRenderbuffer`
-- `getFramebufferAttachmentParameter`
-- `bindRenderbuffer`
-- `createRenderbuffer`
-- `deleteRenderbuffer`
-- `getRenderbufferParameter`
-- `renderbufferStorage`
-- `compressedTexImage2D`
-- `compressedTexSubImage2D`
-- `getTexParameter`
-- `texSubImage2D`
-- `getUniform`
-- `getVertexAttrib`
-- `getVertexAttribOffset`
+- `getFramebufferAttachmentParameter()`
+- `getRenderbufferParameter()`
+- `compressedTexImage2D()`
+- `compressedTexSubImage2D()`
+- `getTexParameter()`
+- `getUniform()`
+- `getVertexAttrib()`
+- `getVertexAttribOffset()`
+- `getBufferSubData()`
+- `getInternalformatParameter()`
+- `renderbufferStorageMultisample()`
+- `compressedTexImage3D()`
+- `compressedTexSubImage3D()`
+- `fenceSync()`
+- `isSync()`
+- `deleteSync()`
+- `clientWaitSync()`
+- `waitSync()`
+- `getSyncParameter()`
+- `getActiveUniformBlockParameter()`
 
-Here is the methods that are partially supported:
-
-- `texImage2D` : works with a few formats only (refer to current implementation). You might want to use `rngl.loadTexture` to load images/camera/videos/whatever textures.
+The `pixels` argument of [`texImage2D()`](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texImage2D) must be `null`, an `ArrayBuffer` with pixel data, or an object of the form `{ localUri }` where `localUri` is the `file://` URI of an image in the device's file system. Thus an `Expo.Asset` object could be used once `.downloadAsync()` has been called on it (and completed) to fetch the resource.
 
 ### Thanks
 
