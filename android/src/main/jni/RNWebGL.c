@@ -1,11 +1,10 @@
 #include <stdint.h>
 
 #include <jni.h>
-#include <thread>
+#include <pthread.h>
 #include <android/log.h>
 
 #include <JavaScriptCore/JSContextRef.h>
-
 #include "RNWebGL.h"
 
 
@@ -59,6 +58,7 @@ Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextGetObject
   return RNWebGLContextGetObject(ctxId, objId);
 }
 
+/*
 JNIEXPORT void JNICALL
 Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextSetFlushMethod
 (JNIEnv *env, jclass clazz, jint ctxId, jobject glContext) {
@@ -71,7 +71,8 @@ Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextSetFlushMethod
   };
   RNWebGLContextSetFlushMethod(ctxId, flushMethod);
 }
-
+*/
+    
 JNIEXPORT bool JNICALL
 Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextNeedsRedraw
 (JNIEnv *env, jclass clazz, jint ctxId) {
@@ -82,12 +83,6 @@ JNIEXPORT void JNICALL
 Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextDrawEnded
 (JNIEnv *env, jclass clazz, jint ctxId) {
   RNWebGLContextDrawEnded(ctxId);
-}
-
-JNIEXPORT void JNICALL
-Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextMapObject
-(JNIEnv *env, jclass clazz, jint ctxId, jint objId, jint glObj) {
-  RNWebGLContextMapObject(ctxId, objId, glObj);
 }
 
 #ifdef __cplusplus

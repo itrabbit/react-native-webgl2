@@ -79,8 +79,8 @@ def getNdkBuildFullPath() {
 }
 
 task downloadJSCHeaders(dependsOn: createNativeDepsDirectories, type: Download) {
-  // in sync with webkit SVN revision 174650
-  def jscAPIBaseURL = 'https://raw.githubusercontent.com/WebKit/webkit/38b15a3ba3c1b0798f2036f7cea36ffdc096202e/Source/JavaScriptCore/API/'
+  // in sync with webkit SVN revision 239348
+  def jscAPIBaseURL = 'https://svn.webkit.org/repository/webkit/releases/WebKitGTK/webkit-2.22.2/Source/JavaScriptCore/API/'
   def jscHeaderFiles = ['JavaScript.h', 'JSBase.h', 'JSContextRef.h', 'JSObjectRef.h', 'JSRetainPtr.h', 'JSStringRef.h', 'JSValueRef.h', 'WebKitAvailability.h']
   def output = new File(downloadsDir, 'jsc')
   output.mkdirs()
@@ -100,7 +100,7 @@ task prepareJSC(dependsOn: downloadJSCHeaders) << {
   }
 }
 
-task buildRNWebGLLib(dependsOn: [prepareJSC], type: Exec) {
+task buildRNWebGL2Lib(dependsOn: [prepareJSC], type: Exec) {
   inputs.dir('src/main/jni')
   inputs.dir('../cpp')
   outputs.dir("$buildDir/rnwebgl2/all")
@@ -114,26 +114,26 @@ task buildRNWebGLLib(dependsOn: [prepareJSC], type: Exec) {
           '--jobs', Runtime.runtime.availableProcessors()
 }
 
-task cleanRNWebGLLib(type: Exec) {
+task cleanRNWebGL2Lib(type: Exec) {
   commandLine getNdkBuildFullPath(),
           '-C', file('src/main/jni').absolutePath,
           'clean'
 }
 
-task packageRNWebGLLibs(dependsOn: buildRNWebGLLib, type: Copy) {
+task packageRNWebGL2Libs(dependsOn: buildRNWebGL2Lib, type: Copy) {
   from "$buildDir/rnwebgl2/all"
-  exclude '**/libjsc.so'
-  exclude '**/libc++_shared.so'
+  exclude "**/libjsc.so"
+  exclude "**/libc++_shared.so"
   into "$buildDir/rnwebgl2/exported"
 }
 
 android {
-  compileSdkVersion 28
+  compileSdkVersion 27
   buildToolsVersion '27.0.3'
 
   defaultConfig {
     minSdkVersion 21
-    targetSdkVersion 28
+    targetSdkVersion 27
     versionCode 1
     versionName "1.0"
     ndk {
@@ -145,9 +145,9 @@ android {
       jniLibs.srcDir "$buildDir/rnwebgl2/exported"
     }
     tasks.withType(JavaCompile) {
-      compileTask -> compileTask.dependsOn packageRNWebGLLibs
+      compileTask -> compileTask.dependsOn packageRNWebGL2Libs
     }
-    clean.dependsOn cleanRNWebGLLib
+    clean.dependsOn cleanRNWebGL2Lib
   }
 }
 

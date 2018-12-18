@@ -86,7 +86,9 @@ public class RNWebGLContext {
             public void run() {
                 long jsContextRef = reactContext.getJavaScriptContextHolder().get();
                 mCtxId = RNWebGLContextCreate(jsContextRef);
-                RNWebGLContextSetFlushMethod(mCtxId, glContext);
+
+                // RNWebGLContextSetFlushMethod(mCtxId, glContext);
+
                 mManager.saveContext(glContext);
                 completionCallback.run();
             }
@@ -143,7 +145,9 @@ public class RNWebGLContext {
 
     public void destroy() {
         if (mGLThread != null) {
+            mManager.unloadWithCtxId(mCtxId);
             mManager.deleteContextWithId(mCtxId);
+
             RNWebGLContextDestroy(mCtxId);
 
             try {

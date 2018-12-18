@@ -7,11 +7,13 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.util.Base64;
+import android.util.Log;
 import android.util.SparseArray;
 
 import com.facebook.common.references.CloseableReference;
 import com.facebook.datasource.DataSource;
 import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.imagepipeline.common.RotationOptions;
 import com.facebook.imagepipeline.core.DefaultExecutorSupplier;
 import com.facebook.imagepipeline.core.ExecutorSupplier;
 import com.facebook.imagepipeline.datasource.BaseBitmapDataSubscriber;
@@ -20,15 +22,19 @@ import com.facebook.imagepipeline.memory.PoolConfig;
 import com.facebook.imagepipeline.memory.PoolFactory;
 import com.facebook.imagepipeline.request.ImageRequest;
 import com.facebook.imagepipeline.request.ImageRequestBuilder;
+import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.views.imagehelper.ImageSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings({"WeakerAccess", "unused"})
@@ -37,6 +43,7 @@ public class RNWebGLObjectManager extends ReactContextBaseJavaModule implements 
     @SuppressWarnings("WeakerAccess")
     ExecutorSupplier executorSupplier;
 
+    private List<RNWebGLObjectConfigLoader> mLoaders = null;
     private SparseArray<RNWebGLObject> mObjects = new SparseArray<>();
     private SparseArray<RNWebGLContext> mContextMap = new SparseArray<>();
 
@@ -235,5 +242,62 @@ public class RNWebGLObjectManager extends ReactContextBaseJavaModule implements 
                 callback.call(new Exception("Image Load Failure"), null);
             }
         }, executorSupplier.forDecode());
+    }
+
+    public RNWebGLObjectConfigLoader objectLoaderForConfig (final ReadableMap config) {
+        if (mLoaders == null) {
+            mLoaders = new ArrayList<>();
+            for (NativeModule module: this.getReactApplicationContext().getCatalystInstance().getNativeModules()) {
+                if (module instanceof RNWebGLObjectConfigLoader) {
+                    mLoaders.add((RNWebGLObjectConfigLoader) module);
+                }
+            }
+        }
+        for (RNWebGLObjectConfigLoader loader : mLoaders) {
+            if (loader.canLoadConfig(config)) {
+                return loader;
+            }
+        }
+        return null;
+    }
+
+    public void loadWithConfigAndWaitAttached (final ReadableMap config, final RNWebGLObjectCompletionBlock callback) {
+        loadWithConfig(config, new RNWebGLObjectCompletionBlock() {
+            @Override
+            public void call(final Exception e, final RNWebGLObject obj) {
+                if (obj != null) {
+                    if (obj instanceof RNWebGLTexture) {
+                        ((RNWebGLTexture)obj).listenAttached(new Runnable() {
+                            public void run() {
+                                callback.call(e, obj);
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    public void unloadWithObjId (int objId) {
+        RNWebGLObject obj = mObjects.get(objId);
+        if (obj != null) {
+            mObjects.remove(objId);
+            obj.destroy();
+        }
+    }
+
+    public void unloadWithCtxId (int ctxId) {
+        SparseArray<RNWebGLObject> remaining = new SparseArray<>();
+        for(int i = 0; i < mObjects.size(); i++) {
+            int objId = mObjects.keyAt(i);
+            RNWebGLObject obj = mObjects.get(objId);
+            if (obj.ctxId == ctxId) {
+                obj.destroy();
+            }
+            else {
+                remaining.put(objId, obj);
+            }
+        }
+        mObjects = remaining;
     }
 }

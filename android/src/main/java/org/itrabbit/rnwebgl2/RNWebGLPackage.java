@@ -17,8 +17,7 @@ public class RNWebGLPackage implements ReactPackage {
     public List<NativeModule> createNativeModules(ReactApplicationContext reactApplicationContext) {
         List<NativeModule> modules = new ArrayList<>();
         modules.add(new RNWebGLTextureManager(reactApplicationContext));
-        modules.add(new RNWebGLTextureLoader(reactApplicationContext));
-        modules.add(new RNWebGLTextureImageLoader(reactApplicationContext));
+        modules.add(new RNWebGLObjectManager(reactApplicationContext));
         return modules;
     }
 
@@ -29,7 +28,7 @@ public class RNWebGLPackage implements ReactPackage {
     @Override
     public List<ViewManager> createViewManagers(ReactApplicationContext reactContext) {
         return Arrays.<ViewManager>asList(
-                new RNWebGLViewManager()
+                new RNWebGLViewManager(reactContext)
         );
     }
 

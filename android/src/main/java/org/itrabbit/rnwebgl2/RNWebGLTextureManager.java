@@ -21,7 +21,7 @@ public class RNWebGLTextureManager extends ReactContextBaseJavaModule {
     @ReactMethod
     public void create(final ReadableMap config, final Promise promise) {
         this.getReactApplicationContext()
-                .getNativeModule(RNWebGLObjectLoader.class)
+                .getNativeModule(RNWebGLObjectManager.class)
                 .loadWithConfigAndWaitAttached(config, new RNWebGLObjectCompletionBlock() {
             public void call(Exception e, RNWebGLObject obj) {
                 if (e != null) {
@@ -45,6 +45,6 @@ public class RNWebGLTextureManager extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void destroy(final int objId) {
-        this.getReactApplicationContext().getNativeModule(RNWebGLObjectLoader.class).unloadWithObjId(objId);
+        this.getReactApplicationContext().getNativeModule(RNWebGLObjectManager.class).unloadWithObjId(objId);
     }
 }
