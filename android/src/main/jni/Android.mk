@@ -13,7 +13,7 @@ LOCAL_SRC_FILES := \
   ../../../../cpp/RNWebGL.cpp \
   ../../../../cpp/JSUtils.c \
   ../../../../cpp/JSConvertTypedArray.c \
-  RNWebGL.c
+  RNWebGL2.c
 
 # weird hack that lets us mix C++ with -std=c++11 and C with -std=c99
 LOCAL_C99_FILES := $(filter %.c, $(LOCAL_SRC_FILES))

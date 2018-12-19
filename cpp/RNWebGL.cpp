@@ -33,7 +33,9 @@
 
 // Debugging utilities
 
+#ifdef __DEV__
 #define RNWebGL_DEBUG     // Whether debugging is on
+#endif
 
 #ifdef RNWebGL_DEBUG
 #ifdef __ANDROID__
@@ -80,6 +82,8 @@ private:
   Batch nextBatch;
   std::vector<Batch> backlog;
   std::mutex backlogMutex;
+
+  RNWebGLContextId contextId;
   
   // [JS thread] Send the current 'next' batch to GL and make a new 'next' batch
   void endNextBatch() noexcept {
@@ -119,7 +123,8 @@ private:
     {
       std::unique_lock<decltype(mutex)> lock(mutex);
       endNextBatch();
-      // flushOnGLThread();
+      // for android, we ask for a flush so that the method yields immediately and we can actually end the frame
+      requestFlush(this->contextId);
       cv.wait(lock, [&] { return done; });
     }
 #else
@@ -127,7 +132,6 @@ private:
     auto future = task.get_future();
     addToNextBatch([&] { task(); });
     endNextBatch();
-    // flushOnGLThread();
     future.wait();
 #endif
   }
@@ -145,16 +149,13 @@ private:
   inline JSValueRef addFutureToNextBatch(JSContextRef jsCtx, F &&f) noexcept {
     auto objId = createObject();
     addToNextBatch([=] {
-      assert(objects.find(objId) == objects.end());
+      //assert(objects.find(objId) == objects.end());
       mapObject(objId, f());
     });
     return JSValueMakeNumber(jsCtx, objId);
   }
   
 public:
-  // function that calls flush on GL thread - on Android it is passed by JNI
-  // std::function<void(void)> flushOnGLThread = [&]{};
-  
   // [GL thread] Do all the remaining work we can do on the GL thread
   void flush(void) noexcept {
     // Keep a copy and clear backlog to minimize lock time
@@ -209,6 +210,9 @@ private:
   
 public:
   RNWebGLContext(JSGlobalContextRef jsCtx, RNWebGLContextId сtxId) {
+    // For android!
+    this->contextId = сtxId;
+
     // Prepare for TypedArray usage
     prepareTypedArrayAPI(jsCtx);
     
@@ -226,11 +230,9 @@ public:
       this->supportsWebGL2 = glesVersion >= 3.0;
       
       glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebuffer);
-      GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-      
       // This should not be called on headless contexts as they don't have default framebuffer.
       // On headless context, status is undefined.
-      if (status != GL_FRAMEBUFFER_UNDEFINED) {
+      if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_UNDEFINED) {
         glClearColor(0, 0, 0, 0);
         glClearDepthf(1);
         glClearStencil(0);
@@ -253,6 +255,8 @@ public:
 private:
   GLint defaultFramebuffer = 0;
   bool unpackFLipY = false;
+  bool unpackPreMultiplyAlpha = false;
+  bool unpackColorSpaceConversion = false;
   
 public:
   bool needsRedraw = false;
@@ -639,8 +643,9 @@ return nullptr;                                                     \
       case GL_UNPACK_FLIP_Y_WEBGL:
         return JSValueMakeBoolean(jsCtx, unpackFLipY);
       case GL_UNPACK_PREMULTIPLY_ALPHA_WEBGL:
+        return JSValueMakeBoolean(jsCtx, unpackPreMultiplyAlpha);
       case GL_UNPACK_COLORSPACE_CONVERSION_WEBGL:
-        return JSValueMakeBoolean(jsCtx, false);
+        return JSValueMakeBoolean(jsCtx, unpackColorSpaceConversion);
       case GL_RASTERIZER_DISCARD:
       case GL_SAMPLE_ALPHA_TO_COVERAGE:
       case GL_SAMPLE_COVERAGE:
@@ -739,6 +744,12 @@ throw std::runtime_error("RNWebGL: getParameter() doesn't support gl."  \
     switch (pname) {
       case GL_UNPACK_FLIP_Y_WEBGL:
         unpackFLipY = param;
+        break;
+      case GL_UNPACK_PREMULTIPLY_ALPHA_WEBGL:
+        unpackPreMultiplyAlpha = param;
+        break;
+      case GL_UNPACK_COLORSPACE_CONVERSION_WEBGL:
+        unpackColorSpaceConversion = param;
         break;
       default:
         RNWebGLSysLog("RNWebGL: gl.pixelStorei() doesn't support this parameter yet!");
@@ -970,7 +981,7 @@ return JSValueMakeBoolean(jsCtx, glResult);   \
   
   // Renderbuffers
   // -------------
-  
+
   _WRAP_METHOD(bindRenderbuffer, 2) {
     JS_UNPACK_ARGV(GLenum target, RNWebGLObjectId fRenderbuffer);
     addToNextBatch([=] {
@@ -1000,7 +1011,7 @@ return JSValueMakeBoolean(jsCtx, glResult);   \
   _WRAP_METHOD_UNIMPL(getRenderbufferParameter)
   
   _WRAP_METHOD_IS_OBJECT(Renderbuffer)
-  
+
   _WRAP_METHOD(renderbufferStorage, 4) {
     JS_UNPACK_ARGV(GLenum target, GLint internalformat, GLsizei width, GLsizei height);
     addToNextBatch([=] {
@@ -1008,7 +1019,7 @@ return JSValueMakeBoolean(jsCtx, glResult);   \
     });
     return nullptr;
   }
-  
+
   
   // Renderbuffers (WebGL2)
   // ----------------------
@@ -2111,7 +2122,6 @@ return nullptr;                                                     \
               setNeedsRedraw(true);
           });
           endNextBatch();
-          // flushOnGLThread();
           return nullptr;
       }
         
@@ -3002,7 +3012,21 @@ JSValueMakeNumber(jsCtx, GL_ ## name))
     static std::unordered_map<RNWebGLContextId, RNWebGLContext *> RNWebGLContextMap;
     static std::mutex RNWebGLContextMapMutex;
     static RNWebGLContextId RNWebGLContextNextId = 1;
-    
+
+#ifdef __ANDROID__
+    static JavaVM *jvm;
+    void InitJVM(JNIEnv *env) {
+      env->GetJavaVM(&jvm);
+    }
+    void requestFlush(RNWebGLContextId ctxId) {
+      JNIEnv *env = nullptr;
+      jvm->AttachCurrentThread(&env, NULL);
+      jclass cls = env->FindClass("org/itrabbit/rnwebgl2/RNWebGL");
+      jmethodID mid = env->GetStaticMethodID(cls, "requestFlush", "(I)V");
+      env->CallStaticVoidMethod(cls, mid, ctxId);
+    }
+#endif
+
     static RNWebGLContext *RNWebGLContextGet(RNWebGLContextId сtxId) {
       std::lock_guard<decltype(RNWebGLContextMapMutex)> lock(RNWebGLContextMapMutex);
       auto iter = RNWebGLContextMap.find(сtxId);
@@ -3048,26 +3072,7 @@ JSValueMakeNumber(jsCtx, GL_ ## name))
       
       return ctxId;
     }
-    
-/*
-    void RNWebGLContextSetFlushMethod(RNWebGLContextId сtxId, std::function<void(void)> flushMethod) {
-      auto ctx = RNWebGLContextGet(сtxId);
-      if (ctx) {
-        ctx->flushOnGLThread = flushMethod;
-      }
-    }
-*/
-    
-/*
-#ifdef __APPLE__
-    void RNWebGLContextSetFlushMethodObjc(RNWebGLContextId сtxId, RNWebGLFlushMethodBlock flushMethod) {
-      RNWebGLContextSetFlushMethod(сtxId, [flushMethod] {
-        flushMethod();
-      });
-    }
-#endif
-*/
- 
+
     bool RNWebGLContextNeedsRedraw(RNWebGLContextId сtxId) {
       auto ctx = RNWebGLContextGet(сtxId);
       if (ctx) {

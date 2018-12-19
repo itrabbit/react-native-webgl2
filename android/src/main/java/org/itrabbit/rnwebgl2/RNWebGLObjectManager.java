@@ -100,7 +100,7 @@ public class RNWebGLObjectManager extends ReactContextBaseJavaModule implements 
     @ReactMethod
     public void createContextAsync(final Promise promise) {
         final RNWebGLContext glContext = new RNWebGLContext(this);
-        glContext.initialize(null, new Runnable() {
+        glContext.initialize(new Runnable() {
             @Override
             public void run() {
                 Bundle results = new Bundle();

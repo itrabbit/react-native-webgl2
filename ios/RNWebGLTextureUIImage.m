@@ -51,9 +51,9 @@
               glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (int)width, (int)height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
               
               glBindTexture(GL_TEXTURE_2D, boundedBefore);
-
-              free(textureData);
-
+              
+              free(textureData);        
+              
               [self attachTexture:textureID];
           }];
       }

@@ -4,6 +4,7 @@
 
 #ifdef __ANDROID__
 #include <GLES3/gl3.h>
+#include <jni.h>
 #endif
 #ifdef __APPLE__
 #include <OpenGLES/ES3/gl.h>
@@ -41,19 +42,6 @@ extern "C" {
     // `global.__WebGLContexts[id]` in JavaScript.
     RNWebGLContextId RNWebGLContextCreate(JSGlobalContextRef jsCtx);
 
-    /*
-#ifdef __cplusplus
-    // [JS thread] Pass function to cpp that will run GL operations on GL thread
-    void RNWebGLContextSetFlushMethod(RNWebGLContextId ctxId, std::function<void(void)> flushMethod);
-#endif
-    
-#ifdef __APPLE__
-    // Objective-C wrapper for RNWebGLContextSetFlushMethod
-    typedef void(^RNWebGLFlushMethodBlock)(void);
-    void RNWebGLContextSetFlushMethodObjc(RNWebGLContextId ctxId, RNWebGLFlushMethodBlock flushMethod);
-#endif
-     */
-    
     // [Any thread] Check whether we should redraw the surface
     bool RNWebGLContextNeedsRedraw(RNWebGLContextId ctxId);
     
@@ -82,7 +70,14 @@ extern "C" {
     
     // [GL thread] Get the underlying OpenGL object an WebGL object maps to.
     GLuint RNWebGLContextGetObject(RNWebGLContextId ctxId, RNWebGLObjectId objId);
-    
+
+#ifdef __ANDROID__
+    // Initializes the JVM, used to flush
+    void InitJVM(JNIEnv *env);
+    // Request Flush for Android
+    void requestFlush(RNWebGLContextId id);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

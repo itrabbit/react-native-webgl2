@@ -7,7 +7,10 @@ import com.facebook.soloader.SoLoader;
 public class RNWebGL {
     static {
         SoLoader.loadLibrary("rnwebgl2");
+        RNWebGL.RNWebGLInit();
     }
+
+    public static native void RNWebGLInit();
 
     public static native void RNWebGLContextFlush(int ctxId);
 
@@ -27,5 +30,7 @@ public class RNWebGL {
 
     public static native void RNWebGLContextMapObject(int ctxId, int objId, int glObj);
 
-    // public static native void RNWebGLContextSetFlushMethod(int ctxId, Object glContext);
+    public static void requestFlush(int ctxId){
+        RNWebGLView.requestFlush(ctxId);
+    }
 }

@@ -1,16 +1,17 @@
 #include <stdint.h>
-
 #include <jni.h>
-#include <pthread.h>
-#include <android/log.h>
-
 #include <JavaScriptCore/JSContextRef.h>
 #include "RNWebGL.h"
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+JNIEXPORT void JNICALL
+Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLInit
+(JNIEnv *env, jclass clazz) {
+  InitJVM(env);
+}
 
 JNIEXPORT jint JNICALL
 Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextCreate
@@ -57,22 +58,7 @@ Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextGetObject
 (JNIEnv *env, jclass clazz, jint ctxId, jint objId) {
   return RNWebGLContextGetObject(ctxId, objId);
 }
-
-/*
-JNIEXPORT void JNICALL
-Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextSetFlushMethod
-(JNIEnv *env, jclass clazz, jint ctxId, jobject glContext) {
-  jclass GLContextClass = env->GetObjectClass(glContext);
-  jobject glContextRef = env->NewGlobalRef(glContext);
-  jmethodID flushMethodRef = env->GetMethodID(GLContextClass, "flush", "()V");
-
-  std::function<void(void)> flushMethod = [env, glContextRef, flushMethodRef, ctxId] {
-    env->CallVoidMethod(glContextRef, flushMethodRef);
-  };
-  RNWebGLContextSetFlushMethod(ctxId, flushMethod);
-}
-*/
-    
+  
 JNIEXPORT bool JNICALL
 Java_org_itrabbit_rnwebgl2_RNWebGL_RNWebGLContextNeedsRedraw
 (JNIEnv *env, jclass clazz, jint ctxId) {

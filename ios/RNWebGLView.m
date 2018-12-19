@@ -65,7 +65,9 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init);
         
         // Set up a draw loop
         _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(draw)];
-        //    _displayLink.preferredFramesPerSecond = 60;
+        
+        _displayLink.preferredFramesPerSecond = 50;
+        
         [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
     }
     return self;
