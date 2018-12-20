@@ -9,30 +9,31 @@ import static android.opengl.GLES30.*;
 
 public class RNWebGLTextureBitmap extends RNWebGLTexture implements Runnable {
 
-    final Bitmap bitmap;
+    private final Bitmap bitmap;
 
     private int glTexture = -1;
 
     public RNWebGLTextureBitmap(ReadableMap config, Bitmap source) {
         super(config, source.getWidth(), source.getHeight());
         boolean yflip = config.hasKey("yflip") && config.getBoolean("yflip");
-        Bitmap src;
         if (yflip) {
             Matrix matrix = new Matrix();
             matrix.postScale(1, -1);
-            src = Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
-            src.setHasAlpha(source.hasAlpha());
+            bitmap = Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+            bitmap.setHasAlpha(source.hasAlpha());
+        } else {
+            bitmap = source.copy(source.getConfig(), source.isMutable());
         }
-        else {
-            src = source;
-        }
-        bitmap = src.copy(src.getConfig(), src.isMutable());
         this.runOnGLThread(this);
+    }
+
+    public int getGlTexture() {
+        return this.glTexture;
     }
 
     @Override
     public void destroy() {
-        super.destroy();
+        android.util.Log.i("RNWebGL", "Remove object - "+this.objId+":"+glTexture);
         if (glTexture >= 0) {
             final int[] textures = new int[]{glTexture};
             this.runOnGLThread(new Runnable() {
@@ -41,6 +42,7 @@ public class RNWebGLTextureBitmap extends RNWebGLTexture implements Runnable {
                 }
             });
         }
+        super.destroy();
     }
 
     public void run() {
@@ -50,9 +52,11 @@ public class RNWebGLTextureBitmap extends RNWebGLTexture implements Runnable {
         int[] boundedBefore = new int[1];
         glGetIntegerv(GL_TEXTURE_BINDING_2D, boundedBefore, 0);
         glBindTexture(GL_TEXTURE_2D, glTexture);
+        GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0);
         // Restore the previous texture bind to not affect user code
         glBindTexture(GL_TEXTURE_2D, boundedBefore[0]);
         this.attachTexture(glTexture);

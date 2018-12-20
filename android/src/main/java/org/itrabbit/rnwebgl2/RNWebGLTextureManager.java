@@ -32,7 +32,7 @@ public class RNWebGLTextureManager extends ReactContextBaseJavaModule {
                     response.putInt("objId", texture.objId);
                     response.putInt("width", texture.width);
                     response.putInt("height", texture.height);
-                    android.util.Log.i("RNWebGL", obj.objId+" of size "+texture.width+"x"+texture.height);
+                    android.util.Log.i("RNWebGL", config.getString("image")+", "+texture.objId+":"+texture.getGlTexture()+" of size "+texture.width+"x"+texture.height);
                     promise.resolve(response);
                 } else {
                     WritableMap response = Arguments.createMap();

@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.util.Base64;
-import android.util.Log;
 import android.util.SparseArray;
 
 import com.facebook.common.references.CloseableReference;
@@ -218,11 +217,13 @@ public class RNWebGLObjectManager extends ReactContextBaseJavaModule implements 
             }
             return;
         }
+
         // Load from url
         ImageSource imageSource = new ImageSource(this.getReactApplicationContext(), source);
+
         ImageRequest imageRequest = ImageRequestBuilder
                 .newBuilderWithSource(imageSource.getUri())
-                .setRotationOptions(RotationOptions.disableRotation()) // FIXME is it still correct? check with diff EXIF images
+                .setRotationOptions(RotationOptions.disableRotation())
                 .build();
 
         DataSource<CloseableReference<CloseableImage>> pending =

@@ -47,4 +47,8 @@ public class RNWebGLTexture extends RNWebGLObject {
     public void runOnGLThread (Runnable runnable) {
         RNWebGLView.runOnGLThread(ctxId, runnable);
     }
+
+    public int getGlTexture() {
+        return 0;
+    }
 }
